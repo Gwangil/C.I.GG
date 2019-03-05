@@ -1,25 +1,43 @@
-# ing... it is proto-type
-
 # Ref.) https://developer.riotgames.com/api-methods/#match-v4/GET_getMatchlist
 
-# Get summoner's palyed rank game list
+## Get summoner's palyed game list
 # @param summonerName
-# Return type : list
+# @param champion   - default NULL, need champion code
+# @param queue      - default NULL, specify queue type ex) 420 : Solo Rank / 450 : HowlingAbyss / 900 : URF
+# @param season     - default NULL, specify season ex) 13 : Season 2019 / 12 : Pre-Season 2019
+# @param endIndex   - default NULL, detail in Ref.
+# @param beginIndex - default NULL, detail in Ref.
+# Return type : tibble, data.frame
 # note) This function requires 'getSummoner' function first.
-
 getMatchHistory <- function(summonerName,
-                       champion = NULL,
-                       queue = NULL, # 420 : Solo Rank, 900 : URF
-                       season = NULL, # 13 : Season 2019, 12 : PreSeason 2019
-                       endIndex = NULL,
-                       beginIndex = NULL) {
+                            champion = NULL,
+                            queue = NULL,
+                            season = NULL,
+                            endIndex = NULL,
+                            beginIndex = NULL) {
   api_url <- "https://kr.api.riotgames.com/lol/match/v4/matchlists/by-account/"
   summonerId <- getSummoner(summonerName)$accountId
-  url_final <- URLencode(iconv(paste0(api_url, summonerId), to = "UTF-8"))
+  
+  if (is.null(c(champion, queue, season, endIndex, beginIndex))) {
+    url_final <- URLencode(iconv(paste0(api_url, summonerId), to = "UTF-8"))
+  } else {
+    url_final <- paste0(api_url, summonerId, "?")
+    if (!is.null(champion)) url_final <- paste0(url_final, "champion=", champion, "&")
+    if (!is.null(queue)) url_final <- paste0(url_final, "queue=", queue, "&")
+    if (!is.null(season)) url_final <- paste0(url_final, "season=", season, "&")
+    if (!is.null(endIndex)) url_final <- paste0(url_final, "endIndex=", endIndex, "&")
+    if (!is.null(beginIndex)) url_final <- paste0(url_final, "beginIndex=", beginIndex, "&")
+    url_final <- URLencode(iconv(url_final, to = "UTF-8"))
+  }
   
   res <- GET(url = url_final,
              add_headers("X-Riot-Token" = getOption("RiotApiKey"))) %>% 
     content()
   
-  return(res)
+  res1 <- res[["matches"]] %>% dplyr::bind_rows()
+  attr(res1, "startIndex") <- res$startIndex
+  attr(res1, "endIndex") <- res$endIndex
+  attr(res1, "totalGames") <- res$totalGames
+  
+  return(res1)
 }

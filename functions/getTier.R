@@ -2,11 +2,11 @@
 
 # Get summoner's rank game position(tier)
 # @param summonerName
-# Return type : list
+# Return type : tibble, data.frame
 # note) This function requires 'getSummoner' function first.
-getRankTier <- function(summonerName) {
+getTier <- function(summonerName) {
   GET(url = URLencode(iconv(paste0("https://kr.api.riotgames.com/lol/league/v4/positions/by-summoner/",
                                    getSummoner(summonerName)$id), to = "UTF-8")),
       add_headers("X-Riot-Token" = getOption("RiotApiKey"))) %>% 
-    content()
+    content() %>% dplyr::bind_rows()
 }

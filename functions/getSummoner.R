@@ -2,10 +2,10 @@
 
 # Get represents a summoner
 # @param summonerName
-# Return type : list
+# Return type : tibble, data.frame
 getSummoner <- function(summonerName) {
   GET(url = URLencode(iconv(paste0("https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-name/",
                                    summonerName), to = "UTF-8")),
       add_headers("X-Riot-Token" = getOption("RiotApiKey"))) %>% 
-    content()
+    content() %>% dplyr::bind_rows()
 }
