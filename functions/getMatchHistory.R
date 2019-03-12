@@ -10,23 +10,23 @@
 # Return type : tibble, data.frame
 # note) This function requires 'getSummoner' function first.
 getMatchHistory <- function(summonerName,
-                            champion = NULL,
-                            queue = NULL,
-                            season = NULL,
-                            endIndex = NULL,
-                            beginIndex = NULL) {
+                            champion = NA,
+                            queue = NA, # 420 : Solo Rank, 450 : HowlingAbyss, 900 : URF
+                            season = NA, # 13 : Season 2019, 12 : Pre-Season 2019
+                            endIndex = NA,
+                            beginIndex = NA) {
   api_url <- "https://kr.api.riotgames.com/lol/match/v4/matchlists/by-account/"
   summonerId <- getSummoner(summonerName)$accountId
   
-  if (is.null(c(champion, queue, season, endIndex, beginIndex))) {
+  if (all(is.na(c(champion, queue, season, endIndex, beginIndex)))) {
     url_final <- URLencode(iconv(paste0(api_url, summonerId), to = "UTF-8"))
   } else {
     url_final <- paste0(api_url, summonerId, "?")
-    if (!is.null(champion)) url_final <- paste0(url_final, "champion=", champion, "&")
-    if (!is.null(queue)) url_final <- paste0(url_final, "queue=", queue, "&")
-    if (!is.null(season)) url_final <- paste0(url_final, "season=", season, "&")
-    if (!is.null(endIndex)) url_final <- paste0(url_final, "endIndex=", endIndex, "&")
-    if (!is.null(beginIndex)) url_final <- paste0(url_final, "beginIndex=", beginIndex, "&")
+    if (!is.na(champion)) url_final <- paste0(url_final, "champion=", champion, "&")
+    if (!is.na(queue)) url_final <- paste0(url_final, "queue=", queue, "&")
+    if (!is.na(season)) url_final <- paste0(url_final, "season=", season, "&")
+    if (!is.na(endIndex)) url_final <- paste0(url_final, "endIndex=", endIndex, "&")
+    if (!is.na(beginIndex)) url_final <- paste0(url_final, "beginIndex=", beginIndex, "&")
     url_final <- URLencode(iconv(url_final, to = "UTF-8"))
   }
   
