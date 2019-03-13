@@ -19,7 +19,15 @@ ui <- fluidPage(
                               label = "큐타입",
                               choices = c("전체" = "all", "솔로랭크" = "420", "무작위 총력전" = "450", "우르프" = "900"),
                               selected = "전체")),
-           column(1, h3(actionButton("go", "Go")))),
+           column(1, h3(actionButton("go", "Go"))),
+           column(2, "Veteran",
+                  plotOutput(outputId = "Veteran",
+                             width = "80px",
+                             height = "80px")),
+           column(2, "Latest",
+                  plotOutput(outputId = "Latest",
+                             width = "80px",
+                             height = "80px"))),
   fluidRow(column(width = 12,
                   h2(textOutput("teir")))),
   fluidRow(column(width = 12,
@@ -40,7 +48,7 @@ server <- function(input, output) {
       select("챔피언" = championNameKo,
              "숙련도 레벨" = championLevel,
              "숙련도 점수" = championPoints,
-             "최근 사용" = lastPlayTime, # api error
+             "최근 사용" = lastPlayTime,
              "상자 획득" = chestGranted,
              "영문명" = championName)},
       options = list(pageLength = 5))
@@ -61,6 +69,22 @@ server <- function(input, output) {
                                                           "-", getTier(summonerRepresent())$rank,
                                                           "-", getTier(summonerRepresent())$leaguePoints)),
                                    " 인가"))
+  
+  output$Veteran <- renderPlot({
+    url_final <- paste0(getOption("DDragon"), getOption("LOLPatch"),"/img/champion/",
+                        championImageFile[[getChampionMastery(summonerRepresent()) %>% slice(1:1) %>%
+                                             left_join(championId, by = "championId") %>% select(championName) %>% unlist]])
+    par(mar = c(0, 0, 0, 0))
+    countcolors::plotArrayAsImage(GET(url = url_final) %>% content)
+  })
+  
+  output$Latest <- renderPlot({
+    url_final <- paste0(getOption("DDragon"), getOption("LOLPatch"),"/img/champion/",
+                        championImageFile[[getMatchHistory(summonerRepresent(), queue = ifelse(input$queueType == "all", NA, input$queueType), endIndex = 1) %>%
+                                             left_join(championId, by = c("champion" = "championId")) %>% select(championName) %>% unlist]])
+    par(mar = c(0, 0, 0, 0))
+    countcolors::plotArrayAsImage(GET(url = url_final) %>% content)
+  })
 }
 
 shinyApp(ui, server)
