@@ -41,7 +41,10 @@ ui <- fluidPage(
                   DTOutput("championMastery"))),
   fluidRow(column(width = 12,
                   h4("당신의 행적-최근 10게임"),
-                  DTOutput("matchHistory")))
+                  DTOutput("matchHistory"))),
+  fluidRow(column(2, h1("C.I.GG")),
+           column(3, h1("Made by Gwangil")),
+           column(3, h1("https://github.com/Gwangil/C.I.GG")))
 )
 
 server <- function(input, output) {
