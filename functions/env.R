@@ -10,6 +10,10 @@ if (!"tidyverse" %in% installed.packages()) {
   install.packages("tidyverse")
   library(tidyverse)
 } else {library(tidyverse)}
+if (!"countcolors" %in% installed.packages()) {
+  install.packages("countcolors")
+  library(countcolors)
+} else {library(countcolors)}
 
 champions <- GET(url = paste0(getOption("DDragon"), getOption("LOLPatch"), "/data/ko_KR/champion.json")) %>% content %>% `[[`("data")
 championId <- sapply(champions, `[`, c("key", "name")) %>% t() %>% data.frame() %>%
