@@ -61,7 +61,8 @@ server <- function(input, output) {
                                            "게임종류" = DESCRIPTION,
                                            "챔피언" = championNameKo,
                                            "gameId" = gameId)  %>%
-                                    left_join(getGameStatus(.$gameId, summonerRepresent()), by = "gameId") %>% select(-gameId))
+                                    left_join(getGameStatus(.$gameId, summonerRepresent()), by = "gameId") %>% select(-gameId),
+                                  options = list(pageLenght = 5))
   
   output$teir <- renderText(paste0(getSummoner(summonerRepresent())$name,
                                    ", 그는 ", ifelse(is.null(getTier(summonerRepresent())$tier),"Unranked",
