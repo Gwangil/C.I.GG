@@ -7,8 +7,13 @@ if (!"DT" %in% installed.packages()) {
   install.packages("DT")
   library(DT)
 } else {library(DT)}
+if (!"shinyjs" %in% installed.packages()) {
+  install.packages("shinyjs")
+  library(shinyjs)
+} else {library(shinyjs)}
 
 ui <- fluidPage(
+  shinyjs::useShinyjs(),
   titlePanel("C.I.GG"),
   fluidRow(column(width = 3,
                   textInput(inputId = "summonerName",
@@ -19,7 +24,8 @@ ui <- fluidPage(
                               label = "큐타입",
                               choices = c("전체" = "all", "솔로랭크" = "420", "무작위 총력전" = "450", "우르프" = "900"),
                               selected = "전체")),
-           column(1, h3(actionButton("go", "Go"))),
+           column(1, h3(actionButton("go", "Go"),
+                        shinyjs::hidden(p(id = "btnText", "Processing...")))),
            column(2, "Veteran",
                   plotOutput(outputId = "Veteran",
                              width = "80px",
@@ -39,10 +45,16 @@ ui <- fluidPage(
 )
 
 server <- function(input, output) {
+  
+  observeEvent(input$go, {
+    shinyjs::disable("go")
+    shinyjs::show("btnText")
+  })
+  
   summonerRepresent <- eventReactive(eventExpr = input$go,
                                      valueExpr = input$summonerName)
   
-  output$championMastery <- renderDT({getChampionMastery(summonerRepresent()) %>% 
+  output$championMastery <- renderDT({getChampionMastery(summonerRepresent()) %>%
       left_join(championId, by = "championId") %>% 
       mutate(lastPlayTime = (lastPlayTime / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) %>% str_sub(end = -1)) %>%
       select("챔피언" = championNameKo,
@@ -53,16 +65,19 @@ server <- function(input, output) {
              "영문명" = championName)},
       options = list(pageLength = 5))
   
-  output$matchHistory <- renderDT(getMatchHistory(summonerRepresent(), queue = ifelse(input$queueType == "all", NA, input$queueType), endIndex = 10) %>%
-                                    left_join(championId, by = c("champion" = "championId")) %>%
-                                    left_join(queueType, by = c("queue" = "ID")) %>%
-                                    mutate(timestamp = (timestamp / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) %>% str_sub(end = -1)) %>%
-                                    select("일시" = timestamp,
-                                           "게임종류" = DESCRIPTION,
-                                           "챔피언" = championNameKo,
-                                           "gameId" = gameId)  %>%
-                                    left_join(getGameStatus(.$gameId, summonerRepresent()), by = "gameId") %>% select(-gameId),
-                                  options = list(pageLenght = 5))
+  output$matchHistory <- renderDT({temp <- getMatchHistory(summonerRepresent(), queue = ifelse(input$queueType == "all", NA, input$queueType), endIndex = 10) %>%
+    left_join(championId, by = c("champion" = "championId")) %>%
+    left_join(queueType, by = c("queue" = "ID")) %>%
+    mutate(timestamp = (timestamp / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) %>% str_sub(end = -1)) %>%
+    select("일시" = timestamp,
+           "게임종류" = DESCRIPTION,
+           "챔피언" = championNameKo,
+           "gameId" = gameId)  %>%
+    left_join(getGameStatus(.$gameId, summonerRepresent()), by = "gameId") %>% select(-gameId)
+  shinyjs::enable("go")
+  shinyjs::hide("btnText")
+  temp},
+  options = list(pageLenght = 5))
   
   output$teir <- renderText(paste0(getSummoner(summonerRepresent())$name,
                                    ", 그는 ", ifelse(is.null(getTier(summonerRepresent())$tier),"Unranked",
