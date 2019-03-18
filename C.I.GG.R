@@ -89,9 +89,9 @@ server <- function(input, output) {
                                 "-", gotTier$rank,
                                 "-", gotTier$leaguePoints)),
          " 인가? ", 
-         gotTier$wins + gotTier$losses, "전",
-         gotTier$wins, "승", gotTier$losses, "패, 승률: ",
-         gotTier$wins / (gotTier$wins + gotTier$losses) * 100, "%")})
+         gotTier$wins + gotTier$losses, "전 ",
+         gotTier$wins, "승 ", gotTier$losses, "패, 승률: ",
+         round(gotTier$wins / (gotTier$wins + gotTier$losses) * 100, 2), "%")})
   
   output$Veteran <- renderPlot({
     url_final <- paste0(getOption("DDragon"), getOption("LOLPatch"),"/img/champion/",
