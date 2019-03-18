@@ -63,7 +63,7 @@ server <- function(input, output) {
       select("챔피언" = championNameKo,
              "숙련도 레벨" = championLevel,
              "숙련도 점수" = championPoints,
-             "최근 사용" = lastPlayTime,
+             #"최근 사용" = lastPlayTime,
              "상자 획득" = chestGranted,
              "영문명" = championName)},
       options = list(pageLength = 5))
@@ -88,7 +88,7 @@ server <- function(input, output) {
                          paste0(gotTier$tier,
                                 "-", gotTier$rank,
                                 "-", gotTier$leaguePoints)),
-         " 인가?", 
+         " 인가? ", 
          gotTier$wins + gotTier$losses, "전",
          gotTier$wins, "승", gotTier$losses, "패, 승률: ",
          gotTier$wins / (gotTier$wins + gotTier$losses) * 100, "%")})
