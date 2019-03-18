@@ -82,12 +82,16 @@ server <- function(input, output) {
   temp},
   options = list(pageLenght = 5))
   
-  output$teir <- renderText(paste0(getSummoner(summonerRepresent())$name,
-                                   ", 그는 ", ifelse(is.null(getTier(summonerRepresent())$tier),"Unranked",
-                                                   paste0(getTier(summonerRepresent())$tier,
-                                                          "-", getTier(summonerRepresent())$rank,
-                                                          "-", getTier(summonerRepresent())$leaguePoints)),
-                                   " 인가"))
+  output$teir <- renderText({gotTier <- getTier(summonerRepresent())
+  paste0(summonerRepresent(),
+         ", 그는 ", ifelse(is.null(gotTier$tier),"Unranked",
+                         paste0(gotTier$tier,
+                                "-", gotTier$rank,
+                                "-", gotTier$leaguePoints)),
+         " 인가?", 
+         gotTier$wins + gotTier$losses, "전",
+         gotTier$wins, "승", gotTier$losses, "패, 승률: ",
+         gotTier$wins / (gotTier$wins + gotTier$losses) * 100, "%")})
   
   output$Veteran <- renderPlot({
     url_final <- paste0(getOption("DDragon"), getOption("LOLPatch"),"/img/champion/",
