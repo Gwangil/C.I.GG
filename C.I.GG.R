@@ -22,7 +22,7 @@ ui <- fluidPage(
            column(width = 3,
                   selectInput(inputId = "queueType",
                               label = "큐타입",
-                              choices = c("전체" = "all", "솔로랭크" = "420", "무작위 총력전" = "450", "우르프" = "900"),
+                              choices = c("전체" = "all", "솔로랭크" = "420", "자유랭크" = "440", "무작위 총력전" = "450", "우르프" = "900"),
                               selected = "전체")),
            column(1, h3(actionButton("go", "Go"),
                         shinyjs::hidden(p(id = "btnText", "Processing...")))),
@@ -35,7 +35,7 @@ ui <- fluidPage(
                              width = "80px",
                              height = "80px"))),
   fluidRow(column(width = 12,
-                  h2(textOutput("teir")))),
+                  h2(htmlOutput("teir")))),
   fluidRow(column(width = 12,
                   h4("챔피언 숙련도"),
                   DTOutput("championMastery"))),
@@ -57,18 +57,18 @@ server <- function(input, output) {
   summonerRepresent <- eventReactive(eventExpr = input$go,
                                      valueExpr = input$summonerName)
   
-  output$championMastery <- renderDT({getChampionMastery(summonerRepresent()) %>%
+  output$championMastery <- renderDT({getChampionMastery(summonerRepresent()) %>% 
       left_join(championId, by = "championId") %>% 
       mutate(lastPlayTime = (lastPlayTime / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) %>% str_sub(end = -1)) %>%
       select("챔피언" = championNameKo,
              "숙련도 레벨" = championLevel,
              "숙련도 점수" = championPoints,
-             #"최근 사용" = lastPlayTime,
+             "최근 사용" = lastPlayTime,
              "상자 획득" = chestGranted,
              "영문명" = championName)},
       options = list(pageLength = 5))
   
-  output$matchHistory <- renderDT({temp <- getMatchHistory(summonerRepresent(), queue = ifelse(input$queueType == "all", NA, input$queueType), endIndex = 10) %>%
+  output$matchHistory <- renderDT({gotHistory <- getMatchHistory(summonerRepresent(), queue = ifelse(input$queueType == "all", NA, input$queueType), endIndex = 10) %>%
     left_join(championId, by = c("champion" = "championId")) %>%
     left_join(queueType, by = c("queue" = "ID")) %>%
     mutate(timestamp = (timestamp / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) %>% str_sub(end = -1)) %>%
@@ -79,19 +79,19 @@ server <- function(input, output) {
     left_join(getGameStatus(.$gameId, summonerRepresent()), by = "gameId") %>% select(-gameId)
   shinyjs::enable("go")
   shinyjs::hide("btnText")
-  temp},
-  options = list(pageLenght = 5))
+  gotHistory},
+  options = list(pageLength = 5))
   
-  output$teir <- renderText({gotTier <- getTier(summonerRepresent())
-  paste0(summonerRepresent(),
-         ", 그는 ", ifelse(is.null(gotTier$tier),"Unranked",
-                         paste0(gotTier$tier,
-                                "-", gotTier$rank,
-                                "-", gotTier$leaguePoints)),
-         " 인가? ", 
-         gotTier$wins + gotTier$losses, "전 ",
-         gotTier$wins, "승 ", gotTier$losses, "패, 승률: ",
-         round(gotTier$wins / (gotTier$wins + gotTier$losses) * 100, 2), "%")})
+  output$teir <- renderUI({gotTier <- getTier(summonerRepresent())
+  HTML(paste0(gotTier$summonerName[1], ",<br/>", paste(paste0("그의 ", gotTier$queueType, "은 ",
+                                                              if(is.null(gotTier$tier)) {"Unranked"} else {
+                                                                paste0(gotTier$tier,
+                                                                       "-", gotTier$rank,
+                                                                       "-", gotTier$leaguePoints)},
+                                                              " 인가?<br/>", 
+                                                              gotTier$wins + gotTier$losses, "전 ",
+                                                              gotTier$wins, "승 ", gotTier$losses, "패, 승률: ",
+                                                              round(gotTier$wins / (gotTier$wins + gotTier$losses) * 100, 2), "%"), collapse = "<br/>")))})
   
   output$Veteran <- renderPlot({
     url_final <- paste0(getOption("DDragon"), getOption("LOLPatch"),"/img/champion/",
@@ -108,6 +108,7 @@ server <- function(input, output) {
     par(mar = c(0, 0, 0, 0))
     countcolors::plotArrayAsImage(GET(url = url_final) %>% content)
   })
+  
 }
 
 shinyApp(ui, server)
