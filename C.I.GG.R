@@ -66,7 +66,7 @@ server <- function(input, output) {
              "최근 사용" = lastPlayTime,
              "상자 획득" = chestGranted,
              "영문명" = championName)},
-      options = list(pageLength = 5))
+      options = list(pageLength = 5, scrollX = T), filter = "top")
   
   output$matchHistory <- renderDT({gotHistory <- getMatchHistory(summonerRepresent(), queue = ifelse(input$queueType == "all", NA, input$queueType), endIndex = 10) %>%
     left_join(championId, by = c("champion" = "championId")) %>%
@@ -80,7 +80,7 @@ server <- function(input, output) {
   shinyjs::enable("go")
   shinyjs::hide("btnText")
   gotHistory},
-  options = list(pageLength = 5))
+  options = list(pageLength = 5, scrollX = T), filter = "top")
   
   output$teir <- renderUI({gotTier <- getTier(summonerRepresent())
   HTML(paste0(gotTier$summonerName[1], ",<br/>", paste(paste0("그의 ", gotTier$queueType, "은 ",
