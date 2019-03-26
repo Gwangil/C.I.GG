@@ -39,9 +39,11 @@ ui <- fluidPage(
   fluidRow(column(width = 12,
                   h4("챔피언 숙련도"),
                   DTOutput("championMastery"))),
+  fluidRow(downloadButton(outputId = 'downMastery', label = 'DownloadMastery')),
   fluidRow(column(width = 12,
                   h4("당신의 행적-최근 10게임"),
                   DTOutput("matchHistory"))),
+  fluidRow(downloadButton(outputId = 'downHistory', label = 'DownloadHistory')),
   fluidRow(column(2, h1("C.I.GG")),
            column(3, h1("Made by Gwangil")),
            column(3, h1("https://github.com/Gwangil/C.I.GG")))
@@ -66,7 +68,21 @@ server <- function(input, output) {
              "최근 사용" = lastPlayTime,
              "상자 획득" = chestGranted,
              "영문명" = championName)},
-      options = list(pageLength = 5, scrollX = T), filter = "top")
+      options = list(pageLength = 5))
+  
+  output$downMastery <- downloadHandler(filename = function() {paste0(summonerRepresent(),"_MatchHistory.csv")},
+                                        content = function(file) {
+                                          gotMastery <- getChampionMastery(summonerRepresent()) %>% 
+                                            left_join(championId, by = "championId") %>% 
+                                            mutate(lastPlayTime = (lastPlayTime / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) %>% str_sub(end = -1)) %>%
+                                            select("챔피언" = championNameKo,
+                                                   "숙련도 레벨" = championLevel,
+                                                   "숙련도 점수" = championPoints,
+                                                   "최근 사용" = lastPlayTime,
+                                                   "상자 획득" = chestGranted,
+                                                   "영문명" = championName)
+                                          write_csv(gotMastery[input$championMastery_rows_all, , drop = T], file)
+                                        })
   
   output$matchHistory <- renderDT({gotHistory <- getMatchHistory(summonerRepresent(), queue = ifelse(input$queueType == "all", NA, input$queueType), endIndex = 10) %>%
     left_join(championId, by = c("champion" = "championId")) %>%
@@ -81,6 +97,20 @@ server <- function(input, output) {
   shinyjs::hide("btnText")
   gotHistory},
   options = list(pageLength = 5, scrollX = T), filter = "top")
+  
+  output$downHistory <- downloadHandler(filename = function() {paste0(summonerRepresent(),"_MatchHistory.csv")},
+                                        content = function(file) {
+                                          gotHistory <- getMatchHistory(summonerRepresent(), queue = ifelse(input$queueType == "all", NA, input$queueType), endIndex = 10) %>%
+                                            left_join(championId, by = c("champion" = "championId")) %>%
+                                            left_join(queueType, by = c("queue" = "ID")) %>%
+                                            mutate(timestamp = (timestamp / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) %>% str_sub(end = -1)) %>%
+                                            select("일시" = timestamp,
+                                                   "게임종류" = DESCRIPTION,
+                                                   "챔피언" = championNameKo,
+                                                   "gameId" = gameId)  %>%
+                                            left_join(getGameStatus(.$gameId, summonerRepresent()), by = "gameId") %>% select(-gameId)
+                                          write_csv(gotHistory[input$matchHistory_rows_all, , drop = T], file)
+                                        })
   
   output$teir <- renderUI({gotTier <- getTier(summonerRepresent())
   HTML(paste0(gotTier$summonerName[1], ",<br/>", paste(paste0("그의 ", gotTier$queueType, "은 ",
