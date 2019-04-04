@@ -37,11 +37,11 @@ ui <- fluidPage(
   fluidRow(column(width = 12,
                   h2(htmlOutput("teir")))),
   fluidRow(column(width = 12,
-                  h4("챔피언 숙련도"),
+                  h4("<챔피언 숙련도>"),
                   DTOutput("championMastery"))),
   fluidRow(downloadButton(outputId = 'downMastery', label = 'DownloadMastery')),
   fluidRow(column(width = 12,
-                  h4("당신의 행적-최근 10게임"),
+                  h4("<최근 게임>"),
                   DTOutput("matchHistory"))),
   fluidRow(downloadButton(outputId = 'downHistory', label = 'DownloadHistory')),
   fluidRow(column(2, h1("C.I.GG")),
@@ -74,7 +74,7 @@ server <- function(input, output) {
                                             write.csv(gotMastery[input$championMastery_rows_all, , drop = T], file, row.names = F, fileEncoding = "UTF-8")
                                           })
     
-    gotHistory <- getMatchHistory(Name$summonerName, queue = ifelse(input$queueType == "all", NA, input$queueType), endIndex = 20) %>%
+    gotHistory <- getMatchHistory(Name$summonerName, queue = ifelse(input$queueType == "all", NA, input$queueType), endIndex = 30) %>%
       left_join(championId, by = c("champion" = "championId")) %>%
       left_join(queueType, by = c("queue" = "ID")) %>%
       mutate(timestamp = (timestamp / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) ,
