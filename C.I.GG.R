@@ -74,7 +74,7 @@ server <- function(input, output) {
                                             write.csv(gotMastery[input$championMastery_rows_all, , drop = T], file, row.names = F, fileEncoding = "UTF-8")
                                           })
     
-    gotHistory <- getMatchHistory(Name$summonerName, queue = ifelse(input$queueType == "all", NA, input$queueType), endIndex = 10) %>%
+    gotHistory <- getMatchHistory(Name$summonerName, queue = ifelse(input$queueType == "all", NA, input$queueType), endIndex = 20) %>%
       left_join(championId, by = c("champion" = "championId")) %>%
       left_join(queueType, by = c("queue" = "ID")) %>%
       mutate(timestamp = (timestamp / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) ,
