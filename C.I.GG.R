@@ -69,28 +69,32 @@ server <- function(input, output) {
     
     output$championMastery <- renderDT(gotMastery, options = list(pageLength = 5))
     
-    output$downMastery <- downloadHandler(filename = function() {paste0(Name$summonerName,"_MatchHistory.csv")},
+    output$downMastery <- downloadHandler(filename = function() {paste0(Name$summonerName,"_MatchMastery_utf8.csv")},
                                           content = function(file) {
-                                            
-                                            write.csv(gotMastery[input$championMastery_rows_all, , drop = T], file, row.names = F)
+                                            write.csv(gotMastery[input$championMastery_rows_all, , drop = T], file, row.names = F, fileEncoding = "UTF-8")
                                           })
     
     gotHistory <- getMatchHistory(Name$summonerName, queue = ifelse(input$queueType == "all", NA, input$queueType), endIndex = 10) %>%
       left_join(championId, by = c("champion" = "championId")) %>%
       left_join(queueType, by = c("queue" = "ID")) %>%
-      mutate(timestamp = (timestamp / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) %>% str_sub(end = -1)) %>%
+      mutate(timestamp = (timestamp / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) ,
+             DESCRIPTION = as.factor(DESCRIPTION),
+             championNameKo = as.factor(championNameKo)) %>%
       select("일시" = timestamp,
              "게임종류" = DESCRIPTION,
              "챔피언" = championNameKo,
-             "gameId" = gameId)  %>%
-      left_join(getGameStatus(.$gameId, Name$summonerName), by = "gameId") %>% select(-gameId)
+             "gameId" = gameId) %>%
+      left_join(getGameStatus(.$gameId, Name$summonerName), by = "gameId") %>% select(-gameId) %>%
+      mutate(Core = as.factor(Core),
+             SpellD = as.factor(SpellD),
+             SpellF = as.factor(SpellF))
     
     output$matchHistory <- renderDT(gotHistory,
                                     options = list(pageLength = 5, scrollX = T), filter = "top")
     
-    output$downHistory <- downloadHandler(filename = function() {paste0(Name$summonerName,"_MatchHistory.csv")},
+    output$downHistory <- downloadHandler(filename = function() {paste0(Name$summonerName,"_MatchHistory_utf8.csv")},
                                           content = function(file) {
-                                            write.csv(gotHistory[input$matchHistory_rows_all, , drop = T], file, row.names = F)
+                                            write.csv(gotHistory[input$matchHistory_rows_all, , drop = T], file, row.names = F, fileEncoding = "UTF-8")
                                           })
     
     gotTier <- getTier(Name$summonerName)

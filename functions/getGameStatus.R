@@ -14,10 +14,10 @@ getGameStatus <- function(gameId, summonerName) {
       res <- data.frame(
         "gameId" = temp$gameId,
         "Victory" = temp$participants[[me]]$stats$win,
-        "K/D/A" = paste0(temp$participants[[me]]$stats$kills, "/",
+        "K.D.A" = paste0(temp$participants[[me]]$stats$kills, "/",
                          temp$participants[[me]]$stats$deaths, "/",
-                         temp$participants[[me]]$stats$assists, ": ",
-                         sprintf("%.2f", (temp$participants[[me]]$stats$kills + temp$participants[[me]]$stats$assists) / temp$participants[[me]]$stats$deaths)),
+                         temp$participants[[me]]$stats$assists),
+        "KDA" = sprintf("%.2f", (temp$participants[[me]]$stats$kills + temp$participants[[me]]$stats$assists) / temp$participants[[me]]$stats$deaths),
         "DPM" = round(temp$participants[[me]]$stats$totalDamageDealtToChampions / (temp$gameDuration / 60), 2),
         "DTPM" = round(temp$participants[[me]]$stats$totalDamageTaken / (temp$gameDuration / 60), 2),
         "VisionScore" = temp$participants[[me]]$stats$visionScore,
@@ -25,8 +25,8 @@ getGameStatus <- function(gameId, summonerName) {
         "Gold" = temp$participants[[me]]$stats$goldEarned,
         "VisionWard" = temp$participants[[me]]$stats$visionWardsBoughtInGame,
         "Core" = runeCore %>% filter(id == temp$participants[[me]]$stats$perk0) %>% select(name) %>% unlist,
-        "D" = spellId %>% filter(key == temp$participants[[me]]$spell1Id) %>% select(name) %>% unlist,
-        "F" = spellId %>% filter(key == temp$participants[[me]]$spell2Id) %>% select(name) %>% unlist)
+        "SpellD" = spellId %>% filter(key == temp$participants[[me]]$spell1Id) %>% select(name) %>% unlist,
+        "SpellF" = spellId %>% filter(key == temp$participants[[me]]$spell2Id) %>% select(name) %>% unlist)
     }) %>% bind_rows() -> res2
     
     return(res2)
