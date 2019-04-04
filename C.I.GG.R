@@ -90,7 +90,7 @@ server <- function(input, output) {
     
     output$downHistory <- downloadHandler(filename = function() {paste0(Name$summonerName,"_MatchHistory.csv")},
                                           content = function(file) {
-                                            write_csv(gotHistory[input$matchHistory_rows_all, , drop = T], file)
+                                            write.csv(gotHistory[input$matchHistory_rows_all, , drop = T], file, row.names = F)
                                           })
     
     gotTier <- getTier(Name$summonerName)
