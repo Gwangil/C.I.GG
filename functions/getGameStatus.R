@@ -10,7 +10,7 @@ getGameStatus <- function(gameId, summonerName) {
     lapply(gameId, function(x) {
       temp <- GET(url = paste0("https://kr.api.riotgames.com/lol/match/v4/matches/", x),
                   add_headers("X-Riot-Token" = getOption("RiotApiKey"))) %>% content
-      me <- which(temp$participantIdentities %>% lapply(FUN =  `[[`, "player") %>% sapply(`[[`, "summonerName") == getSummoner(summonerName)$name)
+      me <- which(temp$participantIdentities %>% lapply(FUN =  `[[`, "player") %>% sapply(`[[`, "summonerName") == summonerName)
       res <- data.frame(
         "gameId" = temp$gameId,
         "Victory" = temp$participants[[me]]$stats$win,
@@ -26,7 +26,8 @@ getGameStatus <- function(gameId, summonerName) {
         "VisionWard" = temp$participants[[me]]$stats$visionWardsBoughtInGame,
         "Core" = runeCore %>% filter(id == temp$participants[[me]]$stats$perk0) %>% select(name) %>% unlist,
         "SpellD" = spellId %>% filter(key == temp$participants[[me]]$spell1Id) %>% select(name) %>% unlist,
-        "SpellF" = spellId %>% filter(key == temp$participants[[me]]$spell2Id) %>% select(name) %>% unlist)
+        "SpellF" = spellId %>% filter(key == temp$participants[[me]]$spell2Id) %>% select(name) %>% unlist,
+        "participantNo" = me)
     }) %>% bind_rows() -> res2
     
     return(res2)

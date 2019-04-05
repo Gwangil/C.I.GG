@@ -74,7 +74,7 @@ server <- function(input, output) {
                                             write.csv(gotMastery[input$championMastery_rows_all, , drop = T], file, row.names = F, fileEncoding = "UTF-8")
                                           })
     
-    gotHistory <- getMatchHistory(Name$summonerName, queue = ifelse(input$queueType == "all", NA, input$queueType), endIndex = 30) %>%
+    gotHistory <- getMatchHistory(Name$summonerName, queue = ifelse(input$queueType == "all", NA, input$queueType), endIndex = 20) %>%
       left_join(championId, by = c("champion" = "championId")) %>%
       left_join(queueType, by = c("queue" = "ID")) %>%
       mutate(timestamp = (timestamp / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) ,
@@ -84,12 +84,12 @@ server <- function(input, output) {
              "게임종류" = DESCRIPTION,
              "챔피언" = championNameKo,
              "gameId" = gameId) %>%
-      left_join(getGameStatus(.$gameId, Name$summonerName), by = "gameId") %>% select(-gameId) %>%
+      left_join(getGameStatus(.$gameId, Name$summonerName), by = "gameId") %>%
       mutate(Core = as.factor(Core),
              SpellD = as.factor(SpellD),
              SpellF = as.factor(SpellF))
     
-    output$matchHistory <- renderDT(gotHistory,
+    output$matchHistory <- renderDT(gotHistory %>% select(-gameId),
                                     options = list(pageLength = 5, scrollX = T), filter = "top")
     
     output$downHistory <- downloadHandler(filename = function() {paste0(Name$summonerName,"_MatchHistory_utf8.csv")},
