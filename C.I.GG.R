@@ -56,6 +56,7 @@ ui <- fluidPage(
 server <- function(input, output) {
   ReactValue <- reactiveValues()
   shinyjs::hide("playingPath")
+  shinyjs::hide("playingPath2")
   
   observeEvent(input$go, {
     shinyjs::disable("go")
@@ -86,6 +87,7 @@ server <- function(input, output) {
       mutate(timestamp = (timestamp / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) ,
              DESCRIPTION = as.factor(DESCRIPTION),
              championNameKo = as.factor(championNameKo)) %>%
+      # filter(timestamp >= lubridate::ymd("20180101")) %>% 
       select("일시" = timestamp,
              "게임종류" = DESCRIPTION,
              "챔피언" = championNameKo,
@@ -114,6 +116,7 @@ server <- function(input, output) {
                                                                                              gotTier$wins + gotTier$losses, "전 ",
                                                                                              gotTier$wins, "승 ", gotTier$losses, "패, 승률: ",
                                                                                              round(gotTier$wins / (gotTier$wins + gotTier$losses) * 100, 2), "%"), collapse = "<br/>")))})
+    
     output$Veteran <- renderPlot({
       url_final <- paste0(getOption("DDragon"), getOption("LOLPatch"),"/img/champion/",
                           championImageFile[[gotMastery %>% slice(1:1) %>% select("영문명") %>% unlist]])
