@@ -89,12 +89,12 @@ server <- function(input, output) {
              SpellD = as.factor(SpellD),
              SpellF = as.factor(SpellF))
     
-    output$matchHistory <- renderDT(gotHistory %>% select(-gameId),
+    output$matchHistory <- renderDT(gotHistory %>% select(-gameId, -participantNo),
                                     options = list(pageLength = 5, scrollX = T), filter = "top")
     
     output$downHistory <- downloadHandler(filename = function() {paste0(ReactValue$gotSummoner$name,"_MatchHistory_utf8.csv")},
                                           content = function(file) {
-                                            write.csv(gotHistory[input$matchHistory_rows_all, , drop = T], file, row.names = F, fileEncoding = "UTF-8")
+                                            write.csv(gotHistory[input$matchHistory_rows_all, , drop = T] %>% select(-gameId, -participantNo), file, row.names = F, fileEncoding = "UTF-8")
                                           })
     
     gotTier <- getTier(ReactValue$gotSummoner)
