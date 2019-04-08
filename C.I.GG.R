@@ -50,14 +50,14 @@ ui <- fluidPage(
 )
 
 server <- function(input, output) {
-  Name <- reactiveValues(summonerName = NA)
+  ReactValue <- reactiveValues()
   
   observeEvent(input$go, {
     shinyjs::disable("go")
     shinyjs::show("btnText")
-    Name$summonerName <- input$summonerName
+    ReactValue$gotSummoner <- getSummoner(input$summonerName)
     
-    gotMastery <- getChampionMastery(Name$summonerName) %>% 
+    gotMastery <- getChampionMastery(ReactValue$gotSummoner) %>% 
       left_join(championId, by = "championId") %>% 
       mutate(lastPlayTime = (lastPlayTime / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) %>% str_sub(end = -1)) %>%
       select("챔피언" = championNameKo,
@@ -69,12 +69,12 @@ server <- function(input, output) {
     
     output$championMastery <- renderDT(gotMastery, options = list(pageLength = 5))
     
-    output$downMastery <- downloadHandler(filename = function() {paste0(Name$summonerName,"_MatchMastery_utf8.csv")},
+    output$downMastery <- downloadHandler(filename = function() {paste0(ReactValue$gotSummoner$name,"_ChampionMastery_utf8.csv")},
                                           content = function(file) {
                                             write.csv(gotMastery[input$championMastery_rows_all, , drop = T], file, row.names = F, fileEncoding = "UTF-8")
                                           })
     
-    gotHistory <- getMatchHistory(Name$summonerName, queue = ifelse(input$queueType == "all", NA, input$queueType), endIndex = 20) %>%
+    gotHistory <- getMatchHistory(ReactValue$gotSummoner, queue = ifelse(input$queueType == "all", NA, input$queueType), endIndex = 20) %>%
       left_join(championId, by = c("champion" = "championId")) %>%
       left_join(queueType, by = c("queue" = "ID")) %>%
       mutate(timestamp = (timestamp / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) ,
@@ -84,7 +84,7 @@ server <- function(input, output) {
              "게임종류" = DESCRIPTION,
              "챔피언" = championNameKo,
              "gameId" = gameId) %>%
-      left_join(getGameStatus(.$gameId, Name$summonerName), by = "gameId") %>%
+      left_join(getGameStatus(.$gameId, ReactValue$gotSummoner), by = "gameId") %>%
       mutate(Core = as.factor(Core),
              SpellD = as.factor(SpellD),
              SpellF = as.factor(SpellF))
@@ -92,22 +92,22 @@ server <- function(input, output) {
     output$matchHistory <- renderDT(gotHistory %>% select(-gameId),
                                     options = list(pageLength = 5, scrollX = T), filter = "top")
     
-    output$downHistory <- downloadHandler(filename = function() {paste0(Name$summonerName,"_MatchHistory_utf8.csv")},
+    output$downHistory <- downloadHandler(filename = function() {paste0(ReactValue$gotSummoner$name,"_MatchHistory_utf8.csv")},
                                           content = function(file) {
                                             write.csv(gotHistory[input$matchHistory_rows_all, , drop = T], file, row.names = F, fileEncoding = "UTF-8")
                                           })
     
-    gotTier <- getTier(Name$summonerName)
+    gotTier <- getTier(ReactValue$gotSummoner)
     
-    output$teir <- renderUI({HTML(paste0(gotTier$summonerName[1], ",<br/>", paste(paste0("그의 ", gotTier$queueType, "은 ",
-                                                                                         if(is.null(gotTier$tier)) {"Unranked"} else {
-                                                                                           paste0(gotTier$tier,
-                                                                                                  "-", gotTier$rank,
-                                                                                                  "-", gotTier$leaguePoints)},
-                                                                                         " 인가?<br/>", 
-                                                                                         gotTier$wins + gotTier$losses, "전 ",
-                                                                                         gotTier$wins, "승 ", gotTier$losses, "패, 승률: ",
-                                                                                         round(gotTier$wins / (gotTier$wins + gotTier$losses) * 100, 2), "%"), collapse = "<br/>")))})
+    output$teir <- renderUI({HTML(paste0(ReactValue$gotSummoner$name, ",<br/>", paste(paste0("그의 ", gotTier$queueType, "은 ",
+                                                                                             if(is.null(gotTier$tier)) {"Unranked"} else {
+                                                                                               paste0(gotTier$tier,
+                                                                                                      "-", gotTier$rank,
+                                                                                                      "-", gotTier$leaguePoints)},
+                                                                                             " 인가?<br/>", 
+                                                                                             gotTier$wins + gotTier$losses, "전 ",
+                                                                                             gotTier$wins, "승 ", gotTier$losses, "패, 승률: ",
+                                                                                             round(gotTier$wins / (gotTier$wins + gotTier$losses) * 100, 2), "%"), collapse = "<br/>")))})
     output$Veteran <- renderPlot({
       url_final <- paste0(getOption("DDragon"), getOption("LOLPatch"),"/img/champion/",
                           championImageFile[[gotMastery %>% slice(1:1) %>% select("영문명") %>% unlist]])

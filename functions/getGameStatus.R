@@ -1,17 +1,17 @@
 # Ref.) https://developer.riotgames.com/api-methods/#match-v4/GET_getMatch
 
 ## Get summoner's game status
-# @param gameId
-# @param summonerName
+# @param gameId : from result of getMatchHistory()
+# @param gotSummoner : result of getSummoner()
 # Return type : tibble, data.frame
 # note) This function requires 'getSummoner' function first.
-getGameStatus <- function(gameId, summonerName) {
+getGameStatus <- function(gameId, gotSumonner) {
   suppressWarnings({
     lapply(gameId, function(x) {
       temp <- GET(url = paste0("https://kr.api.riotgames.com/lol/match/v4/matches/", x),
                   add_headers("X-Riot-Token" = getOption("RiotApiKey"))) %>% content
-      me <- which(temp$participantIdentities %>% lapply(FUN =  `[[`, "player") %>% sapply(`[[`, "summonerName") == summonerName)
-      res <- data.frame(
+      me <- which(temp$participantIdentities %>% lapply(FUN =  `[[`, "player") %>% sapply(`[[`, "summonerName") == gotSumonner$name)
+      res <- tibble(
         "gameId" = temp$gameId,
         "Victory" = temp$participants[[me]]$stats$win,
         "K.D.A" = paste0(temp$participants[[me]]$stats$kills, "/",
@@ -32,4 +32,4 @@ getGameStatus <- function(gameId, summonerName) {
     
     return(res2)
   })
-}
+} 
