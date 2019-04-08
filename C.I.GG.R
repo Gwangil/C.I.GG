@@ -44,6 +44,10 @@ ui <- fluidPage(
                   h4("<최근 게임>"),
                   DTOutput("matchHistory"))),
   fluidRow(downloadButton(outputId = 'downHistory', label = 'DownloadHistory')),
+  fluidRow(column(width = 6,
+                  plotOutput(outputId = "playingPath")),
+           column(width = 6,
+                  plotOutput(outputId = "playingPath2"))),
   fluidRow(column(2, h1("C.I.GG")),
            column(3, h1("Made by Gwangil")),
            column(3, h1("https://github.com/Gwangil/C.I.GG")))
@@ -51,10 +55,12 @@ ui <- fluidPage(
 
 server <- function(input, output) {
   ReactValue <- reactiveValues()
+  shinyjs::hide("playingPath")
   
   observeEvent(input$go, {
     shinyjs::disable("go")
     shinyjs::show("btnText")
+    
     ReactValue$gotSummoner <- getSummoner(input$summonerName)
     
     gotMastery <- getChampionMastery(ReactValue$gotSummoner) %>% 
@@ -94,7 +100,7 @@ server <- function(input, output) {
     
     output$downHistory <- downloadHandler(filename = function() {paste0(ReactValue$gotSummoner$name,"_MatchHistory_utf8.csv")},
                                           content = function(file) {
-                                            write.csv(gotHistory[input$matchHistory_rows_all, , drop = T] %>% select(-gameId, -participantNo), file, row.names = F, fileEncoding = "UTF-8")
+                                            write.csv(gotHistory[input$matchHistory_rows_all, , drop = T], file, row.names = F, fileEncoding = "UTF-8")
                                           })
     
     gotTier <- getTier(ReactValue$gotSummoner)
@@ -121,6 +127,56 @@ server <- function(input, output) {
       par(mar = c(0, 0, 0, 0))
       countcolors::plotArrayAsImage(GET(url = url_final) %>% content)
     })
+    
+    if (!(gotHistory$게임종류[1] %>% str_detect("ARAM"))) {
+      output$playingPath <- renderPlot({
+        GET(url = paste0("https://kr.api.riotgames.com/lol/match/v4/timelines/by-match/", gotHistory$gameId[1]),
+            add_headers("X-Riot-Token" = getOption("RiotApiKey"))) %>% content %>% `[[`("frames") %>%
+          lapply(`[[`, "participantFrames") %>% unlist() %>% enframe() %>%
+          filter(str_detect(name, "position")) %>%
+          separate(col = name, into = c("participant", "X", "coord")) %>% filter(participant == gotHistory$participantNo[1]) %>%
+          select(coord, value) %>% 
+          mutate(value = as.integer(value), coord = as.factor(coord), idx = rep(1:(n()/2), each = 2)) %>% 
+          spread(coord, value) %>%
+          ggplot(mapping = aes(x = x, y = y)) +
+          annotation_custom(summonersLift) +
+          geom_path(aes(size = 1.5, colour = "red")) +
+          coord_fixed(xlim = c(-120, 14870), ylim = c(-120, 14980), ratio = 1, expand = F) +
+          ggtitle("Movement in the most recently played game") +
+          theme(axis.title = element_blank(),
+                axis.line = element_blank(),
+                axis.text = element_blank(),
+                axis.ticks = element_blank(),
+                legend.position = "none",
+                panel.grid = element_blank())
+      })
+      shinyjs::show("playingPath")
+    }
+    
+    if (!(gotHistory$게임종류[2] %>% str_detect("ARAM"))) {
+      output$playingPath2 <- renderPlot({
+        GET(url = paste0("https://kr.api.riotgames.com/lol/match/v4/timelines/by-match/", gotHistory$gameId[2]),
+            add_headers("X-Riot-Token" = getOption("RiotApiKey"))) %>% content %>% `[[`("frames") %>%
+          lapply(`[[`, "participantFrames") %>% unlist() %>% enframe() %>%
+          filter(str_detect(name, "position")) %>%
+          separate(col = name, into = c("participant", "X", "coord")) %>% filter(participant == gotHistory$participantNo[2]) %>%
+          select(coord, value) %>% 
+          mutate(value = as.integer(value), coord = as.factor(coord), idx = rep(1:(n()/2), each = 2)) %>% 
+          spread(coord, value) %>%
+          ggplot(mapping = aes(x = x, y = y)) +
+          annotation_custom(summonersLift) +
+          geom_path(aes(size = 1.5, colour = "red")) +
+          coord_fixed(xlim = c(-120, 14870), ylim = c(-120, 14980), ratio = 1, expand = F) +
+          ggtitle("Movement in the second recently played game") +
+          theme(axis.title = element_blank(),
+                axis.line = element_blank(),
+                axis.text = element_blank(),
+                axis.ticks = element_blank(),
+                legend.position = "none",
+                panel.grid = element_blank())
+      })
+      shinyjs::show("playingPath2")
+    }
     
     shinyjs::enable("go")
     shinyjs::hide("btnText")

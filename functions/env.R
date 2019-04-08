@@ -40,3 +40,6 @@ runeCore <- do.call(bind_rows,
 )
 
 queueType <- suppressWarnings(read_tsv("queueType.txt")[, 1:3])
+
+summonersLift <- grid::rasterGrob(GET(url = "https://s3-us-west-1.amazonaws.com/riot-developer-portal/docs/map11.png") %>% content, interpolate = T)
+# howlingAbyss <- grid::rasterGrob(GET(url = "https://s3-us-west-1.amazonaws.com/riot-developer-portal/docs/map12.png") %>% content, interpolate = T)
