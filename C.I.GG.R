@@ -31,22 +31,19 @@ ui <- fluidPage(
                   h2(htmlOutput("teir")))),
   
   fluidRow(column(width = 12,
-                  h4("<챔피언 숙련도>"),
-                  column(2,
-                         plotOutput(outputId = "veteran",
-                                    width = "80px",
-                                    height = "80px")),
+                  h4(actionButton("btnChampionMastery", "<챔피언 숙련도>")),
+                  column(width = 2,
+                         shinyjs::hidden(plotOutput(outputId = "veteran",
+                                                    width = "80px",
+                                                    height = "80px"))),
                   shinyjs::hidden(downloadButton(outputId = 'downMastery', label = 'DownloadMastery')),
-                  DTOutput("championMastery"))),
+                  shinyjs::hidden(DTOutput("championMastery")))
+  ),
   
   fluidRow(column(width = 12,
                   h4("<최근 게임>"),
-                  column(2,
-                         plotOutput(outputId = "latest",
-                                    width = "80px",
-                                    height = "80px")),
-                  shinyjs::hidden(downloadButton(outputId = 'downHistory', label = 'DownloadHistory')),
-                  DTOutput("matchHistory"))),
+                  DTOutput("matchHistory"),
+                  shinyjs::hidden(downloadButton(outputId = 'downHistory', label = 'DownloadHistory')))),
   fluidRow(column(width = 12,
                   h4("<최근 협곡 동선>")),
            column(width = 4,
@@ -63,6 +60,7 @@ ui <- fluidPage(
 
 server <- function(input, output) {
   ReactValue <- reactiveValues()
+  ReactValue$onoffChampionMastery <- T
   
   observeEvent(input$go, {
     shinyjs::disable("go")
@@ -87,28 +85,42 @@ server <- function(input, output) {
                                                collapse = "<br/>")))})
     
     ##### Champion mastery
-    gotMastery <- getChampionMastery(ReactValue$gotSummoner) %>% 
-      left_join(championId, by = "championId") %>% 
-      mutate(lastPlayTime = (lastPlayTime / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) %>% str_sub(end = -1)) %>%
-      select("챔피언" = championNameKo,
-             "숙련도 레벨" = championLevel,
-             "숙련도 점수" = championPoints,
-             #"최근 사용" = lastPlayTime,
-             "상자 획득" = chestGranted,
-             "영문명" = championName)
-    
-    output$championMastery <- renderDT(gotMastery, options = list(pageLength = 5))
-    
-    output$downMastery <- downloadHandler(filename = function() {paste0(ReactValue$gotSummoner$name,"_ChampionMastery_utf8.csv")},
-                                          content = function(file) {
-                                            write.csv(gotMastery[input$championMastery_rows_all, , drop = T], file, row.names = F, fileEncoding = "UTF-8")
-                                          })
-    
-    output$veteran <- renderPlot({
-      url_final <- paste0(getOption("DDragon"), getOption("LOLPatch"),"/img/champion/",
-                          championImageFile[[gotMastery %>% slice(1:1) %>% select("영문명") %>% unlist]])
-      
-      countcolors::plotArrayAsImage(GET(url = url_final) %>% content, main = "Veteran")
+    observeEvent(input$btnChampionMastery, {
+      if (ReactValue$onoffChampionMastery) {
+        gotMastery <- getChampionMastery(ReactValue$gotSummoner) %>% 
+          left_join(championId, by = "championId") %>% 
+          mutate(lastPlayTime = (lastPlayTime / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) %>% str_sub(end = -1)) %>%
+          select("챔피언" = championNameKo,
+                 "숙련도 레벨" = championLevel,
+                 "숙련도 점수" = championPoints,
+                 "상자 획득" = chestGranted,
+                 "영문명" = championName)
+        
+        output$championMastery <- renderDT(gotMastery, options = list(pageLength = 5))
+        
+        output$downMastery <- downloadHandler(filename = function() {paste0(ReactValue$gotSummoner$name,"_ChampionMastery_utf8.csv")},
+                                              content = function(file) {
+                                                write.csv(gotMastery[input$championMastery_rows_all, , drop = T], file, row.names = F, fileEncoding = "UTF-8")
+                                              })
+        
+        output$veteran <- renderPlot({
+          url_final <- paste0(getOption("DDragon"), getOption("LOLPatch"),"/img/champion/",
+                              championImageFile[[gotMastery %>% slice(1:1) %>% select("영문명") %>% unlist]])
+          countcolors::plotArrayAsImage(GET(url = url_final) %>% content, main = "Veteran")
+        })
+        
+        shinyjs::show("offChampionMastery")
+        shinyjs::show("veteran")
+        shinyjs::show("downMastery")
+        shinyjs::show("championMastery")
+        ReactValue$onoffChampionMastery <- F
+      } else {
+        shinyjs::hide("offChampionMastery")
+        shinyjs::hide("veteran")
+        shinyjs::hide("downMastery")
+        shinyjs::hide("championMastery")
+        ReactValue$onoffChampionMastery <- T
+      }
     })
     
     ##### Match History
@@ -135,13 +147,6 @@ server <- function(input, output) {
                                             write.csv(gotHistory[input$matchHistory_rows_all, , drop = T], file, row.names = F, fileEncoding = "UTF-8")
                                           })
     
-    output$latest <- renderPlot({
-      url_final <- paste0(getOption("DDragon"), getOption("LOLPatch"),"/img/champion/",
-                          championImageFile[[championId %>% filter(championNameKo == gotHistory %>% slice(1:1) %>% select("챔피언") %>% unlist()) %>% select(championName) %>% unlist]])
-      par(mar = c(0, 0, 0, 0))
-      countcolors::plotArrayAsImage(GET(url = url_final) %>% content, main = "Latest")
-    })
-    
     if (!(gotHistory$게임종류[1] %>% str_detect("ARAM"))) {
       output$playingPath <- renderPlot({
         GET(url = paste0("https://kr.api.riotgames.com/lol/match/v4/timelines/by-match/", gotHistory$gameId[1]),
@@ -151,6 +156,12 @@ server <- function(input, output) {
           pull(value) %>% matrix(ncol = 2, byrow = T) %>% as.tibble() %>% `colnames<-`(c("x", "y")) %>%
           ggplot(mapping = aes(x = x, y = y)) +
           annotation_custom(summonersLift) +
+          annotation_custom(grid::rasterGrob(GET(url = paste0(getOption("DDragon"),
+                                                              getOption("LOLPatch"),"/img/champion/",
+                                                              championImageFile[[championId %>%
+                                                                                   filter(championNameKo == gotHistory$챔피언[1]) %>%
+                                                                                   pull(championName)]])) %>% content, interpolate = T),
+                            xmin = 0, xmax = 1800, ymin = 13200, ymax = 15000) + 
           geom_path(aes(size = 1.5, colour = "red")) +
           coord_fixed(xlim = c(-120, 14870), ylim = c(-120, 14980), ratio = 1, expand = F) +
           ggtitle("Movement in the most recently played game") +
@@ -159,7 +170,7 @@ server <- function(input, output) {
                 axis.text = element_blank(),
                 axis.ticks = element_blank(),
                 legend.position = "none",
-                panel.grid = element_blank())
+                panel.grid = element_blank()) 
       })
       shinyjs::show("playingPath")
     }
@@ -173,6 +184,12 @@ server <- function(input, output) {
           pull(value) %>% matrix(ncol = 2, byrow = T) %>% as.tibble() %>% `colnames<-`(c("x", "y")) %>%
           ggplot(mapping = aes(x = x, y = y)) +
           annotation_custom(summonersLift) +
+          annotation_custom(grid::rasterGrob(GET(url = paste0(getOption("DDragon"),
+                                                              getOption("LOLPatch"),"/img/champion/",
+                                                              championImageFile[[championId %>%
+                                                                                   filter(championNameKo == gotHistory$챔피언[2]) %>%
+                                                                                   pull(championName)]])) %>% content, interpolate = T),
+                            xmin = 0, xmax = 1800, ymin = 13200, ymax = 15000) + 
           geom_path(aes(size = 1.5, colour = "red")) +
           coord_fixed(xlim = c(-120, 14870), ylim = c(-120, 14980), ratio = 1, expand = F) +
           ggtitle("Movement in the 2nd recently played game") +
@@ -195,6 +212,12 @@ server <- function(input, output) {
           pull(value) %>% matrix(ncol = 2, byrow = T) %>% as.tibble() %>% `colnames<-`(c("x", "y")) %>%
           ggplot(mapping = aes(x = x, y = y)) +
           annotation_custom(summonersLift) +
+          annotation_custom(grid::rasterGrob(GET(url = paste0(getOption("DDragon"),
+                                                              getOption("LOLPatch"),"/img/champion/",
+                                                              championImageFile[[championId %>%
+                                                                                   filter(championNameKo == gotHistory$챔피언[3]) %>%
+                                                                                   pull(championName)]])) %>% content, interpolate = T),
+                            xmin = 0, xmax = 1800, ymin = 13200, ymax = 15000) + 
           geom_path(aes(size = 1.5, colour = "red")) +
           coord_fixed(xlim = c(-120, 14870), ylim = c(-120, 14980), ratio = 1, expand = F) +
           ggtitle("Movement in the 3rd recently played game") +
@@ -208,7 +231,6 @@ server <- function(input, output) {
       shinyjs::show("playingPath3")
     }
     
-    shinyjs::show("downMastery")
     shinyjs::show("downHistory")
     shinyjs::enable("go")
     shinyjs::hide("btnText")
