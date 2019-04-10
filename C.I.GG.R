@@ -30,28 +30,25 @@ ui <- fluidPage(
   fluidRow(column(width = 12,
                   h2(htmlOutput("teir")))),
   
-  fluidRow(column(width = 12,
-                  h4(actionButton("btnChampionMastery", "<챔피언 숙련도>")),
-                  column(width = 2,
-                         shinyjs::hidden(plotOutput(outputId = "veteran",
-                                                    width = "80px",
-                                                    height = "80px"))),
-                  shinyjs::hidden(downloadButton(outputId = 'downMastery', label = 'DownloadMastery')),
-                  shinyjs::hidden(DTOutput("championMastery")))
-  ),
-  
-  fluidRow(column(width = 12,
-                  h4("<최근 게임>"),
-                  DTOutput("matchHistory"),
-                  shinyjs::hidden(downloadButton(outputId = 'downHistory', label = 'DownloadHistory')))),
-  fluidRow(column(width = 12,
-                  h4("<최근 협곡 동선>")),
-           column(width = 4,
-                  shinyjs::hidden(plotOutput(outputId = "playingPath"))),
-           column(width = 4,
-                  shinyjs::hidden(plotOutput(outputId = "playingPath2"))),
-           column(width = 4,
-                  shinyjs::hidden(plotOutput(outputId = "playingPath3")))),
+  tabsetPanel(
+    tabPanel("챔피언 숙련도",  fluidRow(column(width = 12,
+                                         shinyjs::hidden(imageOutput(outputId = "veteran", width = "100%", height = "100%")),
+                                         DTOutput("championMastery"),
+                                         shinyjs::hidden(downloadButton(outputId = 'downMastery', label = 'DownloadMastery'))
+    )
+    )
+    ),
+    tabPanel("최근 게임", fluidRow(column(width = 12,
+                                      DTOutput("matchHistory"),
+                                      shinyjs::hidden(downloadButton(outputId = 'downHistory', label = 'DownloadHistory'))))),
+    tabPanel("최근 협곡 동선", fluidRow(column(width = 12,
+                                         column(width = 4,
+                                                shinyjs::hidden(plotOutput(outputId = "playingPath"))),
+                                         column(width = 4,
+                                                shinyjs::hidden(plotOutput(outputId = "playingPath2"))),
+                                         column(width = 4,
+                                                shinyjs::hidden(plotOutput(outputId = "playingPath3")))))
+    )),
   
   fluidRow(column(2, h1("C.I.GG")),
            column(3, h1("Made by Gwangil")),
@@ -60,7 +57,6 @@ ui <- fluidPage(
 
 server <- function(input, output) {
   ReactValue <- reactiveValues()
-  ReactValue$onoffChampionMastery <- T
   
   observeEvent(input$go, {
     shinyjs::disable("go")
@@ -85,43 +81,35 @@ server <- function(input, output) {
                                                collapse = "<br/>")))})
     
     ##### Champion mastery
-    observeEvent(input$btnChampionMastery, {
-      if (ReactValue$onoffChampionMastery) {
-        gotMastery <- getChampionMastery(ReactValue$gotSummoner) %>% 
-          left_join(championId, by = "championId") %>% 
-          mutate(lastPlayTime = (lastPlayTime / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) %>% str_sub(end = -1)) %>%
-          select("챔피언" = championNameKo,
-                 "숙련도 레벨" = championLevel,
-                 "숙련도 점수" = championPoints,
-                 "상자 획득" = chestGranted,
-                 "영문명" = championName)
-        
-        output$championMastery <- renderDT(gotMastery, options = list(pageLength = 5))
-        
-        output$downMastery <- downloadHandler(filename = function() {paste0(ReactValue$gotSummoner$name,"_ChampionMastery_utf8.csv")},
-                                              content = function(file) {
-                                                write.csv(gotMastery[input$championMastery_rows_all, , drop = T], file, row.names = F, fileEncoding = "UTF-8")
-                                              })
-        
-        output$veteran <- renderPlot({
-          url_final <- paste0(getOption("DDragon"), getOption("LOLPatch"),"/img/champion/",
-                              championImageFile[[gotMastery %>% slice(1:1) %>% select("영문명") %>% unlist]])
-          countcolors::plotArrayAsImage(GET(url = url_final) %>% content, main = "Veteran")
-        })
-        
-        shinyjs::show("offChampionMastery")
-        shinyjs::show("veteran")
-        shinyjs::show("downMastery")
-        shinyjs::show("championMastery")
-        ReactValue$onoffChampionMastery <- F
-      } else {
-        shinyjs::hide("offChampionMastery")
-        shinyjs::hide("veteran")
-        shinyjs::hide("downMastery")
-        shinyjs::hide("championMastery")
-        ReactValue$onoffChampionMastery <- T
-      }
-    })
+    gotMastery <- getChampionMastery(ReactValue$gotSummoner) %>% 
+      left_join(championId, by = "championId") %>% 
+      mutate(lastPlayTime = (lastPlayTime / 1000) %>% lubridate::as_datetime() %>% `+`(lubridate::hours(9)) %>% str_sub(end = -1)) %>%
+      select("챔피언" = championNameKo,
+             "숙련도 레벨" = championLevel,
+             "숙련도 점수" = championPoints,
+             "상자 획득" = chestGranted,
+             "영문명" = championName)
+    
+    output$championMastery <- renderDT(gotMastery, options = list(pageLength = 5))
+    
+    output$downMastery <- downloadHandler(filename = function() {paste0(ReactValue$gotSummoner$name,"_ChampionMastery_utf8.csv")},
+                                          content = function(file) {
+                                            write.csv(gotMastery[input$championMastery_rows_all, , drop = T], file, row.names = F, fileEncoding = "UTF-8")
+                                          })
+    
+    output$veteran <- renderImage({
+      outfile <- tempfile(fileext='.png')
+      url_image <- paste0(getOption("DDragon"), getOption("LOLPatch"), "/img/champion/",
+                          gotMastery %>% slice(1:10) %>% pull("영문명"), ".png")
+      
+      png(outfile, width = 1000, height = 200)
+      par(mfrow = c(1, length(url_image)))
+      sapply(url_image, function(x) countcolors::plotArrayAsImage(GET(url = x) %>% content))
+      mtext("Top 10 of veteran champions", at = -5, line = 0, cex = 2)
+      dev.off()
+      
+      list(src = outfile)
+    }, deleteFile = TRUE)
     
     ##### Match History
     gotHistory <- getMatchHistory(ReactValue$gotSummoner, queue = ifelse(input$queueType == "all", NA, input$queueType), endIndex = 20) %>%
@@ -231,6 +219,8 @@ server <- function(input, output) {
       shinyjs::show("playingPath3")
     }
     
+    shinyjs::show("veteran")
+    shinyjs::show("downMastery")
     shinyjs::show("downHistory")
     shinyjs::enable("go")
     shinyjs::hide("btnText")
