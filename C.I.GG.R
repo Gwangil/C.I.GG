@@ -60,16 +60,22 @@ server <- function(input, output) {
     gotTier <- getTier(ReactValue$gotSummoner)
     
     output$teir <- renderUI({HTML(paste0(ReactValue$gotSummoner$name, ",<br/>",
-                                         paste(paste0("그의 ", gotTier$queueType, "은 ",
-                                                      if(is.null(gotTier$tier)) {"Unranked"} else {
-                                                        paste0(gotTier$tier,
-                                                               "-", gotTier$rank,
-                                                               "-", gotTier$leaguePoints)},
-                                                      " 인가?<br/>", 
-                                                      gotTier$wins + gotTier$losses, "전 ",
-                                                      gotTier$wins, "승 ", gotTier$losses, "패, 승률: ",
-                                                      round(gotTier$wins / (gotTier$wins + gotTier$losses) * 100, 2), "%"),
-                                               collapse = "<br/>")))})
+                                         if(is.null(gotTier$tier)) {
+                                           paste0("5252, 너는 언랭이라구.")
+                                           } else {
+                                             paste(paste0("그의 ", gotTier$queueType, "은 ",
+                                                          paste0(gotTier$tier,
+                                                                 "-", gotTier$rank,
+                                                                 "-", gotTier$leaguePoints),
+                                                          " 인가?<br/>",
+                                                          gotTier$wins + gotTier$losses, "전 ",
+                                                          gotTier$wins, "승 ", gotTier$losses, "패, 승률: ",
+                                                          round(gotTier$wins / (gotTier$wins + gotTier$losses) * 100, 2), "%"),
+                                                   collapse = "<br/>")
+                                             }
+                                         )
+                                  )
+      })
     
     ##### Champion mastery
     gotMastery <- getChampionMastery(ReactValue$gotSummoner) %>% 

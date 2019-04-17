@@ -8,8 +8,7 @@ getTier <- function(gotSummoner) {
   suppressWarnings(
     GET(url = URLencode(iconv(paste0("https://kr.api.riotgames.com/lol/league/v4/positions/by-summoner/",
                                      gotSummoner$id), to = "UTF-8")),
-        add_headers("X-Riot-Token" = getOption("RiotApiKey"))) %>% 
-      content() %>% lapply( function(x) x %>% unlist() %>% enframe() %>% column_to_rownames("name") %>% t() %>% as_tibble() %>% 
-                              mutate_if(!is.na(as.integer(.)), as.integer)) %>% bind_rows()
+        add_headers("X-Riot-Token" = getOption("RiotApiKey"))) %>% content() %>%
+      lapply(as.data.frame) %>% bind_rows()
   )
 }
